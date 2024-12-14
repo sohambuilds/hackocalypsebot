@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from transformers import BertTokenizer, TFBertModel
 import torch
+import streamlit as st
 
 # Define API URLs and headers
 GROQ_API_KEY = "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"
@@ -109,8 +110,10 @@ def search_relevant_context(query, context):
 
     return relevant_context
 
-# Main logic for the RAG chatbot
-def rag_chatbot():
+# Streamlit app for the RAG chatbot
+def rag_chatbot_streamlit():
+    st.title("RAG Chatbot for Survival Assistance")
+    
     # Step 1: Fetch monster, survivor, and resource data from APIs
     monsters = fetch_monster_data()
     survivors = fetch_survivor_data()
@@ -121,21 +124,19 @@ def rag_chatbot():
     context += format_survivor_data(survivors)
     context += format_resource_data(resources)
 
-    # Step 3: Chat loop
-    print("Welcome to the RAG Chatbot! Ask me anything about survival.")
-    while True:
-        query = input("\nYour question (type 'exit' to quit): ")
-        if query.lower() == "exit":
-            print("Goodbye!")
-            break
-        
-        # Step 4: Use FAISS to retrieve relevant context
-        relevant_context = search_relevant_context(query, context)
+    # Step 3: Chat loop with Streamlit components
+    user_query = st.text_input("Your question (type 'exit' to quit):")
+    if user_query:
+        if user_query.lower() == "exit":
+            st.write("Goodbye!")
+        else:
+            # Step 4: Use FAISS to retrieve relevant context
+            relevant_context = search_relevant_context(user_query, context)
 
-        # Step 5: Generate a response based on the query and retrieved context
-        response = generate_response(query, relevant_context)
-        print("\nChatbot Response:", response)
+            # Step 5: Generate a response based on the query and retrieved context
+            response = generate_response(user_query, relevant_context)
+            st.write(f"Chatbot Response: {response}")
 
 # Example usage
 if __name__ == "__main__":
-    rag_chatbot()
+    rag_chatbot_streamlit()
