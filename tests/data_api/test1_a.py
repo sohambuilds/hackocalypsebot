@@ -21,123 +21,123 @@ tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 model = BertModel.from_pretrained("bert-base-uncased")
 model.eval()  # Set model to evaluation mode
 
-# Function to fetch monster data from API
-def fetch_monster_data():
+# Function to fetch data from an API
+def fetch_data(api_url, error_message, default_response):
     try:
-        response = requests.get(MONSTER_API_URL, headers={"accept": "application/json"})
-        response.raise_for_status()
-        return response.json().get("monsters", [])
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching monster data: {e}")
-        return [{"monster_id": "unknown", "lat": 0, "lon": 0}]  # Default fallback
-
-# Function to fetch resource data from API
-def fetch_resource_data():
-    try:
-        response = requests.get(RESOURCES_API_URL, headers={"accept": "application/json"})
-        response.raise_for_status()
-        return response.json().get("features", [])
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching resource data: {e}")
-        return []
-
-# Function to fetch survivor data from API
-def fetch_survivor_data():
-    try:
-        response = requests.get(SURVIVORS_API_URL, headers={"accept": "application/json"})
+        response = requests.get(api_url, headers={"accept": "application/json"})
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching survivor data: {e}")
-        return []
+        st.error(f"{error_message}: {e}")
+        return default_response
 
-# Function to format monster data into readable context
+# Fetch monster, resource, and survivor data
+def fetch_monster_data():
+    return fetch_data(MONSTER_API_URL, "Error fetching monster data", [{"monster_id": "unknown", "lat": 0, "lon": 0}])
+
+def fetch_resource_data():
+    return fetch_data(RESOURCES_API_URL, "Error fetching resource data", [])
+
+def fetch_survivor_data():
+    return fetch_data(SURVIVORS_API_URL, "Error fetching survivor data", [])
+
+# Format data into readable context
 def format_monster_data(monsters):
-    return [f"Monster {monster['monster_id']} at ({monster['lat']}, {monster['lon']})" for monster in monsters]
+    formatted = []
+    for monster in monsters:
+        if isinstance(monster, dict):
+            monster_id = monster.get("monster_id", "unknown")
+            lat = monster.get("lat", "unknown")
+            lon = monster.get("lon", "unknown")
+            formatted.append(f"Monster {monster_id} at ({lat}, {lon})")
+        else:
+            formatted.append("Invalid monster data")
+    return formatted
 
-# Function to format survivor data into readable context
 def format_survivor_data(survivors):
-    return [f"Survivor {survivor['survivor_id']} in {survivor['district']} ({survivor['lat']}, {survivor['lon']})" for survivor in survivors]
+    formatted = []
+    for survivor in survivors:
+        if isinstance(survivor, dict):
+            survivor_id = survivor.get("survivor_id", "unknown")
+            district = survivor.get("district", "unknown")
+            lat = survivor.get("lat", "unknown")
+            lon = survivor.get("lon", "unknown")
+            formatted.append(f"Survivor {survivor_id} in {district} ({lat}, {lon})")
+        else:
+            formatted.append("Invalid survivor data")
+    return formatted
 
-# Function to format resource data into readable context
 def format_resource_data(resources):
-    return [
-        f"{props.get('dist_name', 'Unknown')}: Temp {props.get('temp', 'N/A')}°C, Food {props.get('food_rations', 'N/A')}kg"
-        for resource in resources if (props := resource.get("properties"))
-    ]
+    formatted = []
+    for resource in resources:
+        if isinstance(resource, dict):
+            props = resource.get("properties", {})
+            dist_name = props.get("dist_name", "Unknown")
+            temp = props.get("temp", "N/A")
+            food = props.get("food_rations", "N/A")
+            formatted.append(f"{dist_name}: Temp {temp}\u00b0C, Food {food}kg")
+        else:
+            formatted.append("Invalid resource data")
+    return formatted
 
-# Function to get BERT embeddings for a list of texts using PyTorch
+# Generate embeddings for texts using BERT
 def get_embeddings(texts):
-    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        embeddings = outputs.last_hidden_state  # Use the last hidden state
-        mean_embeddings = torch.mean(embeddings, dim=1).numpy()  # Mean pooling of token embeddings
-    return mean_embeddings
+    try:
+        inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            embeddings = outputs.last_hidden_state
+            return torch.mean(embeddings, dim=1).numpy()  # Mean pooling
+    except Exception as e:
+        st.error(f"Error generating embeddings: {e}")
+        return np.zeros((len(texts), 768))  # Return zero embeddings as fallback
 
-# Function to calculate cosine similarity between embeddings
+# Calculate cosine similarity
 def calculate_cosine_similarity(query_embedding, context_embeddings):
     return cosine_similarity(query_embedding, context_embeddings)
 
-# Function to find the most relevant context based on cosine similarity
+# Find the most relevant context based on cosine similarity
 def find_relevant_context(query, context):
-    # Get embeddings for the query and context
-    query_embedding = get_embeddings([query])
-    context_embeddings = get_embeddings(context)
+    try:
+        query_embedding = get_embeddings([query])
+        context_embeddings = get_embeddings(context)
+        similarities = calculate_cosine_similarity(query_embedding, context_embeddings)
+        top_indices = np.argsort(similarities[0])[::-1]
+        return [context[i] for i in top_indices[:3]]  # Top 3 relevant contexts
+    except Exception as e:
+        st.error(f"Error finding relevant context: {e}")
+        return []
 
-    # Calculate cosine similarities
-    similarities = calculate_cosine_similarity(query_embedding, context_embeddings)
-
-    # Sort contexts by similarity in descending order
-    top_indices = np.argsort(similarities[0])[::-1]
-    top_contexts = [context[i] for i in top_indices[:3]]  # Retrieve top 3 relevant contexts
-
-    return top_contexts
-
-# Function to generate a response using Groq API
+# Generate a response using Groq API
 def generate_response(query, context):
-    messages = [{"role": "user", "content": query}]
-    for doc in context:
-        messages.append({"role": "system", "content": doc})
-
+    messages = [{"role": "user", "content": query}] + [{"role": "system", "content": doc} for doc in context]
     try:
         response = requests.post(GROQ_API_URL, json={
-            "model": "mixtral-8x7b-32768",  # Example model ID
+            "model": "mixtral-8x7b-32768",
             "messages": messages
         }, headers=HEADERS)
-
+        response.raise_for_status()
         response_data = response.json()
-        if "choices" not in response_data:
-            raise ValueError(f"Unexpected response format: {response_data}")
-        
-        return response_data["choices"][0]["message"]["content"]
+        return response_data.get("choices", [{}])[0].get("message", {}).get("content", "No response available.")
     except Exception as e:
         return f"Error generating response: {e}"
 
 # Main function to run the chatbot on Streamlit
 def run_chatbot():
-    # Fetch monster, survivor, and resource data
     monsters = fetch_monster_data()
     survivors = fetch_survivor_data()
     resources = fetch_resource_data()
 
-    # Format data into readable context
     context = format_monster_data(monsters)
     context += format_survivor_data(survivors)
     context += format_resource_data(resources)
 
-    # Streamlit UI components
     st.title("Survival Chatbot")
     st.write("Ask me anything about survival!")
 
-    # User input for query
     query = st.text_input("Your question:")
-
     if query:
-        # Find relevant context using cosine similarity
         relevant_context = find_relevant_context(query, context)
-
-        # Generate a response based on the query and relevant context
         response = generate_response(query, relevant_context)
         st.write("Chatbot Response:")
         st.write(response)
