@@ -1,6 +1,6 @@
-langchain==0.0.290       # Core LangChain library
-langchain_huggingface==0.1.7  # HuggingFace embeddings for LangChain
-langchain_community-vectorstores==0.0.4  # FAISS integration for LangChain
-langchain_groq==0.1.3  # Groq-based LLM integration
-faiss-cpu==1.7.4  # FAISS library for similarity search
-sentence-transformers==2.2.2  # HuggingFace Sentence Transformers for embeddings
+langchain==0.3.12     # Core LangChain library
+langchain-huggingface==0.1.2 # HuggingFace embeddings for LangChain
+langchain-community==0.3.12 # FAISS integration for LangChain
+langchain_groq==0.2.1 # Groq-based LLM integration
+faiss-cpu==1.9.0.post1  # FAISS library for similarity search
+sentence-transformers==3.3.1  # HuggingFace Sentence Transformers for embeddings
