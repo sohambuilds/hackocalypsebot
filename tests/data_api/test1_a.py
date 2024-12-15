@@ -1,11 +1,10 @@
-import faiss
 import numpy as np
 import requests
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from transformers import BertTokenizer, TFBertModel
-import torch
 import streamlit as st
+from sklearn.neighbors import NearestNeighbors  # Added import for scikit-learn
 
 # Define API URLs and headers
 GROQ_API_KEY = "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"
@@ -82,7 +81,7 @@ def generate_response(query, context):
 
     try:
         response = requests.post(GROQ_API_URL, json={
-            "model": "llama3-8b-8192",  # Example model ID
+            "model": "mixtral-8x7b-32768",  # Example model ID
             "messages": messages
         }, headers=HEADERS)
 
@@ -94,18 +93,20 @@ def generate_response(query, context):
     except Exception as e:
         return f"Error generating response: {e}"
 
-# Function to perform similarity search using FAISS
+# Function to perform similarity search using scikit-learn
 def search_relevant_context(query, context):
     # Get embeddings for the context and the query
     context_embeddings = get_embeddings(context)
     query_embedding = get_embeddings([query])
 
-    # Create FAISS index
-    index = faiss.IndexFlatL2(context_embeddings.shape[1])  # Using L2 distance (Euclidean)
-    index.add(context_embeddings)
+    # Use NearestNeighbors for similarity search
+    nbrs = NearestNeighbors(n_neighbors=3, metric='euclidean')  # Using Euclidean distance
+    nbrs.fit(context_embeddings)
 
     # Search for the most similar context
-    _, indices = index.search(query_embedding, k=3)  # Retrieve top 3 similar contexts
+    distances, indices = nbrs.kneighbors(query_embedding)
+
+    # Retrieve top 3 most similar contexts
     relevant_context = [context[i] for i in indices[0]]
 
     return relevant_context
@@ -130,7 +131,7 @@ def run_chatbot():
     query = st.text_input("Your question:")
 
     if query:
-        # Perform FAISS search for relevant context
+        # Perform similarity search for relevant context
         relevant_context = search_relevant_context(query, context)
 
         # Generate a response based on the query and relevant context

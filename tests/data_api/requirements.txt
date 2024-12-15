@@ -1,8 +1,7 @@
-faiss-cpu==1.9.0
-numpy==1.26.4
-requests==2.32.3
-tensorflow==2.18.0
-transformers==4.47.0
-streamlit==1.41.1
-torch==2.5.1
-tf-kernel==2.18.0
+numpy==1.23.4
+requests==2.28.1
+tensorflow==2.14.0
+transformers==4.32.0
+torch==2.1.0
+streamlit==1.24.0
+scikit-learn==1.2.2
