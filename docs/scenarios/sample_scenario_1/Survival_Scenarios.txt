@@ -1,0 +1,276 @@
+﻿24-Hour Event Sequence for Survivors Starting at Node A
+
+
+
+
+---
+
+
+Hour 0
+
+
+Location: Node A (City Hall)
+
+
+Event: Survivors arrive and establish initial camp.
+
+
+
+
+
+
+---
+
+
+Hour 3
+
+
+Location: Node B (Central Hospital)
+
+
+Event: Chemical Leak
+
+
+A hazardous chemical spill occurs within the Central Hospital.
+
+
+Impact: Main Street (A ↔ B) becomes contaminated and temporarily unusable.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 6
+
+
+Location: Node C (Fire Station)
+
+
+Event: Zombie Outbreak
+
+
+Zombies breach the Fire Station perimeter.
+
+
+Impact: First Avenue (B ↔ C) is compromised and poses a threat.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 9
+
+
+Location: Node D (Subway Entrance)
+
+
+Event: Anomaly Detection
+
+
+Unexplained energy anomalies detected near the Subway Entrance.
+
+
+Impact: Broadway Street (C ↔ D) experiences intermittent disruptions.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 12
+
+
+Location: Node H (Major Intersection 1)
+
+
+Event: Resource Scarcity Alert
+
+
+Reports indicate dwindling medical supplies at the School Gymnasium (Node F).
+
+
+Impact: Pathway to Gymnasium (H ↔ F) sees increased congestion and potential hazards.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 15
+
+
+Location: Node J (Park Area)
+
+
+Event: Zombie Migration
+
+
+Zombie activity observed migrating towards the Park Area.
+
+
+Impact: Road to Park Area (B ↔ J) becomes highly dangerous and heavily infested.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 18
+
+
+Location: Node M (Small Residential Block)
+
+
+Event: Structural Collapse
+
+
+Partial collapse of buildings in the Small Residential Block.
+
+
+Impact: Lane to Residential Block (E ↔ M) is blocked, restricting movement between these nodes.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 21
+
+
+Location: Node N (Riverside Path)
+
+
+Event: Chemical Contamination Spread
+
+
+Chemical leak from Node B spreads towards the Riverside Pathway.
+
+
+Impact: Riverside Pathway (M ↔ N) becomes hazardous, limiting safe traversal.
+
+
+
+
+
+
+
+
+---
+
+
+Hour 24
+
+
+Location: Node K (Campsite)
+
+
+Event: Anomaly Escalation
+
+
+Energy anomalies at the Campsite intensify, causing unpredictable environmental effects.
+
+
+Impact: Trail to Campsite (J ↔ K) and Path to Cliffside Lookout (K ↔ L) become unstable and unsafe.
+
+
+
+
+
+
+
+
+---
+
+
+Summary of Affected Connections Over 24 Hours
+
+
+A ↔ B (Main Street): Contaminated at Hour 3.
+
+
+B ↔ C (First Avenue): Compromised by zombies at Hour 6.
+
+
+C ↔ D (Broadway Street): Disrupted by anomalies at Hour 9.
+
+
+H ↔ F (Pathway to Gymnasium): Hazardous congestion at Hour 12.
+
+
+B ↔ J (Road to Park Area): Infested with zombies at Hour 15.
+
+
+E ↔ M (Lane to Residential Block): Blocked by structural collapse at Hour 18.
+
+
+M ↔ N (Riverside Pathway): Hazardous due to chemical spread at Hour 21.
+
+
+J ↔ K (Trail to Campsite) & K ↔ L (Path to Cliffside Lookout): Unstable due to anomaly escalation at Hour 24.
+
+
+
+
+
+
+---
+
+
+Special Attributes Impacted
+
+
+Safe Zones Affected:
+
+
+Node F (School Gymnasium): Increased resource scarcity at Hour 12.
+
+
+Node G (Library Basement): Indirectly affected through pathway disruptions.
+
+
+
+
+Obstacle:
+
+
+Node O (Collapsed Bridge): Remains as a removed connection throughout.
+
+
+
+
+High-Density Areas:
+
+
+Nodes A, B, C, and surrounding intersections experience escalating threats and disruptions over time.
