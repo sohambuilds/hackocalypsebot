@@ -5,3 +5,4 @@ tensorflow==2.18.0
 transformers==4.47.0
 streamlit==1.41.1
 torch==2.5.1
+tf-kernel==2.18.0
