@@ -1,10 +1,9 @@
 import numpy as np
 import requests
-import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from transformers import BertTokenizer, TFBertModel
+import torch
+from transformers import BertTokenizer, BertModel
 import streamlit as st
-from sklearn.neighbors import NearestNeighbors  # Added import for scikit-learn
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Define API URLs and headers
 GROQ_API_KEY = "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"
@@ -17,9 +16,10 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Load a BERT model and tokenizer for embedding using TensorFlow
+# Load a BERT model and tokenizer for embedding using PyTorch
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-model = TFBertModel.from_pretrained("bert-base-uncased")
+model = BertModel.from_pretrained("bert-base-uncased")
+model.eval()  # Set model to evaluation mode
 
 # Function to fetch monster data from API
 def fetch_monster_data():
@@ -66,12 +66,33 @@ def format_resource_data(resources):
         for resource in resources if (props := resource.get("properties"))
     ]
 
-# Function to get BERT embeddings for a list of texts using TensorFlow
+# Function to get BERT embeddings for a list of texts using PyTorch
 def get_embeddings(texts):
-    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="tf", max_length=512)
-    outputs = model(**inputs)
-    embeddings = outputs.last_hidden_state.numpy()  # Use the last hidden state
-    return np.mean(embeddings, axis=1)  # Mean pooling of token embeddings
+    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        embeddings = outputs.last_hidden_state  # Use the last hidden state
+        mean_embeddings = torch.mean(embeddings, dim=1).numpy()  # Mean pooling of token embeddings
+    return mean_embeddings
+
+# Function to calculate cosine similarity between embeddings
+def calculate_cosine_similarity(query_embedding, context_embeddings):
+    return cosine_similarity(query_embedding, context_embeddings)
+
+# Function to find the most relevant context based on cosine similarity
+def find_relevant_context(query, context):
+    # Get embeddings for the query and context
+    query_embedding = get_embeddings([query])
+    context_embeddings = get_embeddings(context)
+
+    # Calculate cosine similarities
+    similarities = calculate_cosine_similarity(query_embedding, context_embeddings)
+
+    # Sort contexts by similarity in descending order
+    top_indices = np.argsort(similarities[0])[::-1]
+    top_contexts = [context[i] for i in top_indices[:3]]  # Retrieve top 3 relevant contexts
+
+    return top_contexts
 
 # Function to generate a response using Groq API
 def generate_response(query, context):
@@ -93,24 +114,6 @@ def generate_response(query, context):
     except Exception as e:
         return f"Error generating response: {e}"
 
-# Function to perform similarity search using scikit-learn
-def search_relevant_context(query, context):
-    # Get embeddings for the context and the query
-    context_embeddings = get_embeddings(context)
-    query_embedding = get_embeddings([query])
-
-    # Use NearestNeighbors for similarity search
-    nbrs = NearestNeighbors(n_neighbors=3, metric='euclidean')  # Using Euclidean distance
-    nbrs.fit(context_embeddings)
-
-    # Search for the most similar context
-    distances, indices = nbrs.kneighbors(query_embedding)
-
-    # Retrieve top 3 most similar contexts
-    relevant_context = [context[i] for i in indices[0]]
-
-    return relevant_context
-
 # Main function to run the chatbot on Streamlit
 def run_chatbot():
     # Fetch monster, survivor, and resource data
@@ -131,8 +134,8 @@ def run_chatbot():
     query = st.text_input("Your question:")
 
     if query:
-        # Perform similarity search for relevant context
-        relevant_context = search_relevant_context(query, context)
+        # Find relevant context using cosine similarity
+        relevant_context = find_relevant_context(query, context)
 
         # Generate a response based on the query and relevant context
         response = generate_response(query, relevant_context)
