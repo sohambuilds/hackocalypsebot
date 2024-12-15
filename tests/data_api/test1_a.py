@@ -1,11 +1,13 @@
+import faiss
 import numpy as np
 import requests
-from transformers import BertTokenizer, BertModel
-import streamlit as st
-from sklearn.metrics.pairwise import cosine_similarity
+import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from transformers import BertTokenizer, TFBertModel
+import torch
 
 # Define API URLs and headers
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MONSTER_API_URL = "https://api.mlsakiit.com/monsters"
 SURVIVORS_API_URL = "https://api.mlsakiit.com/survivors"
@@ -15,131 +17,131 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Load a BERT model and tokenizer for embedding using Hugging Face (without torch)
+# Load a BERT model and tokenizer for embedding using TensorFlow
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-model = BertModel.from_pretrained("bert-base-uncased")
+model = TFBertModel.from_pretrained("bert-base-uncased")
 
-# Function to fetch data from an API
-def fetch_data(api_url, error_message, default_response):
+# Function to fetch monster data from API
+def fetch_monster_data():
     try:
-        response = requests.get(api_url, headers={"accept": "application/json"})
+        response = requests.get(MONSTER_API_URL, headers={"accept": "application/json"})
+        response.raise_for_status()
+        return response.json().get("monsters", [])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching monster data: {e}")
+        return [{"monster_id": "unknown", "lat": 0, "lon": 0}]  # Default fallback
+
+# Function to fetch resource data from API
+def fetch_resource_data():
+    try:
+        response = requests.get(RESOURCES_API_URL, headers={"accept": "application/json"})
+        response.raise_for_status()
+        return response.json().get("features", [])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching resource data: {e}")
+        return []
+
+# Function to fetch survivor data from API
+def fetch_survivor_data():
+    try:
+        response = requests.get(SURVIVORS_API_URL, headers={"accept": "application/json"})
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        st.error(f"{error_message}: {e}")
-        return default_response
-
-# Fetch monster, resource, and survivor data
-def fetch_monster_data():
-    return fetch_data(MONSTER_API_URL, "Error fetching monster data", [{"monster_id": "unknown", "lat": 0, "lon": 0}])
-
-def fetch_resource_data():
-    return fetch_data(RESOURCES_API_URL, "Error fetching resource data", [])
-
-def fetch_survivor_data():
-    return fetch_data(SURVIVORS_API_URL, "Error fetching survivor data", [])
-
-# Format data into readable context
-def format_monster_data(monsters):
-    formatted = []
-    for monster in monsters:
-        if isinstance(monster, dict):
-            monster_id = monster.get("monster_id", "unknown")
-            lat = monster.get("lat", "unknown")
-            lon = monster.get("lon", "unknown")
-            formatted.append(f"Monster {monster_id} at ({lat}, {lon})")
-        else:
-            formatted.append("Invalid monster data")
-    return formatted
-
-def format_survivor_data(survivors):
-    formatted = []
-    for survivor in survivors:
-        if isinstance(survivor, dict):
-            survivor_id = survivor.get("survivor_id", "unknown")
-            district = survivor.get("district", "unknown")
-            lat = survivor.get("lat", "unknown")
-            lon = survivor.get("lon", "unknown")
-            formatted.append(f"Survivor {survivor_id} in {district} ({lat}, {lon})")
-        else:
-            formatted.append("Invalid survivor data")
-    return formatted
-
-def format_resource_data(resources):
-    formatted = []
-    for resource in resources:
-        if isinstance(resource, dict):
-            props = resource.get("properties", {})
-            dist_name = props.get("dist_name", "Unknown")
-            temp = props.get("temp", "N/A")
-            food = props.get("food_rations", "N/A")
-            formatted.append(f"{dist_name}: Temp {temp}\u00b0C, Food {food}kg")
-        else:
-            formatted.append("Invalid resource data")
-    return formatted
-
-# Generate embeddings for texts using Hugging Face's transformers
-def get_embeddings(texts):
-    try:
-        inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
-        with torch.no_grad():
-            outputs = model(**inputs)
-            embeddings = outputs.last_hidden_state
-            return torch.mean(embeddings, dim=1).numpy()  # Mean pooling
-    except Exception as e:
-        st.error(f"Error generating embeddings: {e}")
-        return np.zeros((len(texts), 768))  # Return zero embeddings as fallback
-
-# Calculate cosine similarity
-def calculate_cosine_similarity(query_embedding, context_embeddings):
-    return cosine_similarity(query_embedding, context_embeddings)
-
-# Find the most relevant context based on cosine similarity
-def find_relevant_context(query, context):
-    try:
-        query_embedding = get_embeddings([query])
-        context_embeddings = get_embeddings(context)
-        similarities = calculate_cosine_similarity(query_embedding, context_embeddings)
-        top_indices = np.argsort(similarities[0])[::-1]
-        return [context[i] for i in top_indices[:3]]  # Top 3 relevant contexts
-    except Exception as e:
-        st.error(f"Error finding relevant context: {e}")
+        print(f"Error fetching survivor data: {e}")
         return []
 
-# Generate a response using Groq API
+# Function to format monster data into tactical survival context
+def format_monster_data(monsters):
+    return [
+        f"Monster {monster['monster_id']} at ({monster['lat']}, {monster['lon']}). Suggest avoiding at night for safety."
+        for monster in monsters
+    ]
+
+# Function to format survivor data into tactical survival context
+def format_survivor_data(survivors):
+    return [
+        f"Survivor {survivor['survivor_id']} located in {survivor['district']} ({survivor['lat']}, {survivor['lon']}). Key needs: food, water."
+        for survivor in survivors
+    ]
+
+# Function to format resource data into tactical survival context
+def format_resource_data(resources):
+    return [
+        f"Resource at {props.get('dist_name', 'Unknown')}: Food {props.get('food_rations', 'N/A')}kg, Water {props.get('water', 'N/A')}L. Consider stockpiling these resources for longer survival."
+        for resource in resources if (props := resource.get("properties"))
+    ]
+
+# Function to get BERT embeddings for a list of texts using TensorFlow
+def get_embeddings(texts):
+    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="tf", max_length=512)
+    outputs = model(**inputs)
+    embeddings = outputs.last_hidden_state.numpy()  # Use the last hidden state
+    return np.mean(embeddings, axis=1)  # Mean pooling of token embeddings
+
+# Function to generate a response using Groq API
 def generate_response(query, context):
-    messages = [{"role": "user", "content": query}] + [{"role": "system", "content": doc} for doc in context]
+    messages = [{"role": "user", "content": query}]
+    for doc in context:
+        messages.append({"role": "system", "content": doc})
+
     try:
         response = requests.post(GROQ_API_URL, json={
-            "model": "mixtral-8x7b-32768",
+            "model": "llama3-8b-8192",  # Example model ID
             "messages": messages
         }, headers=HEADERS)
-        response.raise_for_status()
+
         response_data = response.json()
-        return response_data.get("choices", [{}])[0].get("message", {}).get("content", "No response available.")
+        if "choices" not in response_data:
+            raise ValueError(f"Unexpected response format: {response_data}")
+
+        return response_data["choices"][0]["message"]["content"]
     except Exception as e:
         return f"Error generating response: {e}"
 
-# Main function to run the chatbot on Streamlit
-def run_chatbot():
+# Function to perform similarity search using FAISS
+def search_relevant_context(query, context):
+    # Get embeddings for the context and the query
+    context_embeddings = get_embeddings(context)
+    query_embedding = get_embeddings([query])
+
+    # Create FAISS index
+    index = faiss.IndexFlatL2(context_embeddings.shape[1])  # Using L2 distance (Euclidean)
+    index.add(context_embeddings)
+
+    # Search for the most similar context
+    _, indices = index.search(query_embedding, k=3)  # Retrieve top 3 similar contexts
+    relevant_context = [context[i] for i in indices[0]]
+
+    return relevant_context
+
+# Main logic for the RAG chatbot
+def rag_chatbot():
+    # Step 1: Fetch monster, survivor, and resource data from APIs
     monsters = fetch_monster_data()
     survivors = fetch_survivor_data()
     resources = fetch_resource_data()
 
+    # Step 2: Format the data into actionable tactical context
     context = format_monster_data(monsters)
     context += format_survivor_data(survivors)
     context += format_resource_data(resources)
 
-    st.title("Survival Chatbot")
-    st.write("Ask me anything about survival!")
+    # Step 3: Chat loop
+    print("Welcome to the Tactical Survival Assistant! Ask me anything about survival.")
+    while True:
+        query = input("\nYour question (type 'exit' to quit): ")
+        if query.lower() == "exit":
+            print("Goodbye!")
+            break
 
-    query = st.text_input("Your question:")
-    if query:
-        relevant_context = find_relevant_context(query, context)
+        # Step 4: Use FAISS to retrieve relevant context
+        relevant_context = search_relevant_context(query, context)
+
+        # Step 5: Generate a response based on the query and retrieved context
         response = generate_response(query, relevant_context)
-        st.write("Chatbot Response:")
-        st.write(response)
+        print("\nTactical Survival Response:", response)
 
-# Run the Streamlit app
+# Example usage
 if __name__ == "__main__":
-    run_chatbot()
+    rag_chatbot()
