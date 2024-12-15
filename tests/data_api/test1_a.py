@@ -1,6 +1,5 @@
 import numpy as np
 import requests
-import torch
 from transformers import BertTokenizer, BertModel
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
@@ -16,10 +15,9 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Load a BERT model and tokenizer for embedding using PyTorch
+# Load a BERT model and tokenizer for embedding using Hugging Face (without torch)
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 model = BertModel.from_pretrained("bert-base-uncased")
-model.eval()  # Set model to evaluation mode
 
 # Function to fetch data from an API
 def fetch_data(api_url, error_message, default_response):
@@ -80,7 +78,7 @@ def format_resource_data(resources):
             formatted.append("Invalid resource data")
     return formatted
 
-# Generate embeddings for texts using BERT
+# Generate embeddings for texts using Hugging Face's transformers
 def get_embeddings(texts):
     try:
         inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
