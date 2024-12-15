@@ -29,7 +29,7 @@ def fetch_monster_data():
         response.raise_for_status()
         return response.json().get("monsters", [])
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching monster data: {e}")
+        st.error(f"Error fetching monster data: {e}")
         return [{"monster_id": "unknown", "lat": 0, "lon": 0}]  # Default fallback
 
 # Function to fetch resource data from API
@@ -39,7 +39,7 @@ def fetch_resource_data():
         response.raise_for_status()
         return response.json().get("features", [])
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching resource data: {e}")
+        st.error(f"Error fetching resource data: {e}")
         return []
 
 # Function to fetch survivor data from API
@@ -49,7 +49,7 @@ def fetch_survivor_data():
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching survivor data: {e}")
+        st.error(f"Error fetching survivor data: {e}")
         return []
 
 # Function to format monster data into readable context
@@ -110,33 +110,34 @@ def search_relevant_context(query, context):
 
     return relevant_context
 
-# Streamlit app for the RAG chatbot
-def rag_chatbot_streamlit():
-    st.title("RAG Chatbot for Survival Assistance")
-    
-    # Step 1: Fetch monster, survivor, and resource data from APIs
+# Main function to run the chatbot on Streamlit
+def run_chatbot():
+    # Fetch monster, survivor, and resource data
     monsters = fetch_monster_data()
     survivors = fetch_survivor_data()
     resources = fetch_resource_data()
 
-    # Step 2: Format the data into readable context
+    # Format data into readable context
     context = format_monster_data(monsters)
     context += format_survivor_data(survivors)
     context += format_resource_data(resources)
 
-    # Step 3: Chat loop with Streamlit components
-    user_query = st.text_input("Your question (type 'exit' to quit):")
-    if user_query:
-        if user_query.lower() == "exit":
-            st.write("Goodbye!")
-        else:
-            # Step 4: Use FAISS to retrieve relevant context
-            relevant_context = search_relevant_context(user_query, context)
+    # Streamlit UI components
+    st.title("Survival Chatbot")
+    st.write("Ask me anything about survival!")
 
-            # Step 5: Generate a response based on the query and retrieved context
-            response = generate_response(user_query, relevant_context)
-            st.write(f"Chatbot Response: {response}")
+    # User input for query
+    query = st.text_input("Your question:")
 
-# Example usage
+    if query:
+        # Perform FAISS search for relevant context
+        relevant_context = search_relevant_context(query, context)
+
+        # Generate a response based on the query and relevant context
+        response = generate_response(query, relevant_context)
+        st.write("Chatbot Response:")
+        st.write(response)
+
+# Run the Streamlit app
 if __name__ == "__main__":
-    rag_chatbot_streamlit()
+    run_chatbot()
